@@ -432,7 +432,11 @@ function updateHostContainer(current: null | Fiber, workInProgress: Fiber) {
     }
   }
 }
-
+/**
+ * 在updateHostComponent内部，
+ * 被处理完的props会被赋值给workInProgress.updateQueue，
+ * 并最终会在commit阶段被渲染在页面上。
+ * */
 function updateHostComponent(
   current: Fiber,
   workInProgress: Fiber,
@@ -934,7 +938,9 @@ function completeDehydratedSuspenseBoundary(
     return true;
   }
 }
-
+/**
+ * completeWork也是针对不同fiber.tag调用不同的处理逻辑。
+ * */
 function completeWork(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -1129,8 +1135,7 @@ function completeWork(
                 markUpdate(workInProgress);
               }
             } else {
-              // We use the updateHostComponent path becuase it produces
-              // the update queue we need for Hoistables.
+              // 当update时，Fiber节点已经存在对应DOM节点，所以不需要生成DOM节点。需要做的主要是处理props，
               updateHostComponent(
                 current,
                 workInProgress,
@@ -1213,10 +1218,28 @@ function completeWork(
       }
       // Fall through
     }
-    case HostComponent: {
+    case HostComponent: { // TODO 🚨 重点关注页面渲染所必须的HostComponent(即原生DOM组件对应的Fiber节点
       popHostContext(workInProgress);
       const type = workInProgress.type;
+      // 同时针对HostComponent，
+      // 判断update时我们还需要考
+      // 虑workInProgress.stateNode != null ?（即该Fiber节点是否存在对应的DOM节点）
+      // stateNode：存储与当前 Fiber 节点相关的实例或 DOM 节点
+      /**
+       * stateNode 是 Fiber 对象的一个属性，其值取决于 Fiber 节点的类型：
+       *
+       * 类组件：stateNode 是该类组件的实例对象（即 this）。
+       * 函数组件：函数组件没有实例，因此 stateNode 通常为 null。
+       * DOM 节点：stateNode 是该 Fiber 节点对应的 DOM 元素。
+       * */
       if (current !== null && workInProgress.stateNode != null) {
+        // TODO 当update时，Fiber节点已经存在对应DOM节点，所以不需要生成DOM节点。需要做的主要是处理props，比如：
+        /**
+         * onClick、onChange等回调函数的注册
+         * 处理style prop
+         * 处理DANGEROUSLY_SET_INNER_HTML prop
+         * 处理children prop
+         * */
         updateHostComponent(
           current,
           workInProgress,
@@ -1225,31 +1248,13 @@ function completeWork(
           renderLanes,
         );
       } else {
-        if (!newProps) {
-          if (workInProgress.stateNode === null) {
-            throw new Error(
-              'We must have new props for new mounts. This error is likely ' +
-                'caused by a bug in React. Please file an issue.',
-            );
-          }
-
-          // This can happen when we abort work.
-          bubbleProperties(workInProgress);
-          return null;
-        }
-
         const currentHostContext = getHostContext();
-        // TODO: Move createInstance to beginWork and keep it on a context
-        // "stack" as the parent. Then append children as we go in beginWork
-        // or completeWork depending on whether we want to add them top->down or
-        // bottom->up. Top->down is faster in IE11.
         const wasHydrated = popHydrationState(workInProgress);
         if (wasHydrated) {
-          // TODO: Move this and createInstance step into the beginPhase
-          // to consolidate.
           prepareToHydrateHostInstance(workInProgress, currentHostContext);
         } else {
           const rootContainerInstance = getRootHostContainer();
+          // // 为fiber创建对应DOM节点
           const instance = createInstance(
             type,
             newProps,
@@ -1257,15 +1262,15 @@ function completeWork(
             currentHostContext,
             workInProgress,
           );
-          // TODO: For persistent renderers, we should pass children as part
-          // of the initial instance creation
           markCloned(workInProgress);
+          // 将子孙DOM节点插入刚生成的DOM节点中
+          /**
+           * 由于completeWork属于“归”阶段调用的函数，
+           * 每次调用appendAllChildren时都会将已生成的子孙DOM节点插入当前生成的DOM节点下。
+           * 那么当“归”到rootFiber时，我们已经有一个构建好的离屏DOM树
+           * */
           appendAllChildren(instance, workInProgress, false, false);
           workInProgress.stateNode = instance;
-
-          // Certain renderers require commit-time effects for initial mount.
-          // (eg DOM renderer supports auto-focus for certain elements).
-          // Make sure such renderers get scheduled for later work.
           if (
             finalizeInitialChildren(
               instance,
@@ -1279,11 +1284,6 @@ function completeWork(
         }
       }
       bubbleProperties(workInProgress);
-
-      // This must come at the very end of the complete phase, because it might
-      // throw to suspend, and if the resource immediately loads, the work loop
-      // will resume rendering as if the work-in-progress completed. So it must
-      // fully complete.
       preloadInstanceAndSuspendIfNeeded(
         workInProgress,
         workInProgress.type,
@@ -1296,8 +1296,6 @@ function completeWork(
       const newText = newProps;
       if (current && workInProgress.stateNode != null) {
         const oldText = current.memoizedProps;
-        // If we have an alternate, that means this is an update and we need
-        // to schedule a side-effect to do the updates.
         updateHostText(current, workInProgress, oldText, newText);
       } else {
         if (typeof newText !== 'string') {
@@ -1402,30 +1400,15 @@ function completeWork(
           cache = offscreenFiber.memoizedState.cachePool.pool;
         }
         if (cache !== previousCache) {
-          // Run passive effects to retain/release the cache.
           offscreenFiber.flags |= Passive;
         }
       }
 
-      // If the suspended state of the boundary changes, we need to schedule
-      // a passive effect, which is when we process the transitions
       if (nextDidTimeout !== prevDidTimeout) {
         if (enableTransitionTracing) {
           const offscreenFiber: Fiber = (workInProgress.child: any);
           offscreenFiber.flags |= Passive;
         }
-
-        // If the suspended state of the boundary changes, we need to schedule
-        // an effect to toggle the subtree's visibility. When we switch from
-        // fallback -> primary, the inner Offscreen fiber schedules this effect
-        // as part of its normal complete phase. But when we switch from
-        // primary -> fallback, the inner Offscreen fiber does not have a complete
-        // phase. So we need to schedule its effect here.
-        //
-        // We also use this flag to connect/disconnect the effects, but the same
-        // logic applies: when re-connecting, the Offscreen fiber's complete
-        // phase will handle scheduling the effect. It's only when the fallback
-        // is active that we have to do anything special.
         if (nextDidTimeout) {
           const offscreenFiber: Fiber = (workInProgress.child: any);
           offscreenFiber.flags |= Visibility;

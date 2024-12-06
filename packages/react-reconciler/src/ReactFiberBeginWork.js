@@ -344,6 +344,13 @@ export function reconcileChildren(
   // 不论走哪个逻辑，最终他会生成新的子Fiber节点并赋值给workInProgress.child，
   // 作为本次beginWork返回值，并作为下次performUnitOfWork执行时workInProgress的传参。
   // mountChildFiber和reconcileChildFibers之间的唯一区别： reconcileChildFibers会为生成的Fiber节点带上【effectTag】属性
+  // render阶段的工作是在【内存】中进行
+  // 当工作结束后会通知Renderer需要执行的DOM操作，要执行DOM操作具体类型就保存在fiber.effectTag中
+  // effectTag对应的DOM操作：https://github.com/facebook/react/blob/1fb18e22ae66fdb1dc127347e169e73948778e5a/packages/react-reconciler/src/ReactSideEffectTags.js
+  // Placement、Update、PlacementUpdate、Deletion
+  // 通过二进制表示effectTag，可以方便的使用位操作为fiber.effectTag赋值多个effect。
+  /// commit阶段在执行DOM操作时每个节点都会执行一次插入操作，这样大量的DOM操作是极低效的。
+  // 为了解决这个问题，在mount时只有rootFiber会赋值Placement effectTag，在commit阶段只会执行一次插入操作。
   if (current === null) {
     // TODO 🚨 针对mount组件的逻辑
     workInProgress.child = mountChildFibers(

@@ -2176,6 +2176,14 @@ function resetFormOnFiber(fiber: Fiber) {
     resetFormInstance(formInstance);
   }
 }
+/**
+ * 该阶段触发的生命周期钩子和hook可以直接访问到已经改变后的DOM，即该阶段是可以参与DOM layout的阶段。
+ * commitLayoutEffects一共做了两件事：
+ *
+ * 1. commitLayoutEffectOnFiber（调用生命周期钩子和hook相关操作）
+ *
+ * 2. commitAttachRef（赋值 ref）
+ * */
 
 export function commitLayoutEffects(
   finishedWork: Fiber,

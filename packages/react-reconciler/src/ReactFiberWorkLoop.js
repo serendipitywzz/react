@@ -2992,6 +2992,8 @@ function panicOnRootError(root: FiberRoot, error: mixed) {
   workInProgress = null;
 }
 
+// 在completeWork的上层函数completeUnitOfWork中，
+// 每个执行完completeWork且存在effectTag的Fiber节点会被保存在一条被称为effectList的单向链表中。
 function completeUnitOfWork(unitOfWork: Fiber): void {
   // Attempt to complete the current unit of work, then move to the next
   // sibling. If there are no more siblings, return to the parent fiber.
@@ -3332,6 +3334,8 @@ function commitRootImpl(
           // event when logging events.
           trackSchedulerEvent();
         }
+        // 触发useEffect 被异步调度的回调函数就是触发useEffect的方法flushPassiveEffects。
+        // effectList中保存了需要执行副作用的Fiber节点
         flushPassiveEffects(true);
         // This render triggered passive effects: release the root cache pool
         // *after* passive effects fire to avoid freeing a cache pool that may
@@ -3403,6 +3407,15 @@ function commitRootImpl(
     // the mutation phase, so that the previous tree is still current during
     // componentWillUnmount, but before the layout phase, so that the finished
     // work is current during componentDidMount/Update.
+    /**
+     * workInProgress Fiber树在commit阶段完成渲染后会变为current Fiber树。
+     * 这行代码的作用就是切换fiberRootNode指向的current Fiber树。
+     * componentDidMount和componentDidUpdate会在layout阶段执行。
+     * 此时current Fiber树已经指向更新后的Fiber树，在生命周期钩子内获取的DOM就是更新后的。
+     *
+     * layout阶段会遍历effectList，依次执行commitLayoutEffects。
+     * 该方法的主要工作为“根据effectTag调用不同的处理函数处理Fiber并更新ref。
+     * */
     root.current = finishedWork;
 
     // The next phase is the layout phase, where we call effects that read
@@ -3452,7 +3465,7 @@ function commitRootImpl(
   }
 
   const rootDidHavePassiveEffects = rootDoesHavePassiveEffects;
-
+  // // useEffect相关
   if (rootDoesHavePassiveEffects) {
     // This commit has passive effects. Stash a reference to them. But don't
     // schedule a callback until after flushing layout work.
@@ -3482,6 +3495,7 @@ function commitRootImpl(
   // any work remaining at all (which would also include stuff like Suspense
   // retries or transitions). It's been like this for a while, though, so fixing
   // it probably isn't that urgent.
+  // 性能优化相关
   if (remainingLanes === NoLanes) {
     // If there's no remaining work, we can clear the set of already failed
     // error boundaries.
@@ -3665,6 +3679,11 @@ function releaseRootPooledCache(root: FiberRoot, remainingLanes: Lanes) {
   }
 }
 
+// 整个useEffect异步调用分为三步：
+// before mutation阶段在scheduleCallback中调度flushPassiveEffects
+// layout阶段之后将effectList赋值给rootWithPendingPassiveEffects
+// scheduleCallback触发flushPassiveEffects，flushPassiveEffects内部遍历rootWithPendingPassiveEffects
+// useEffect异步执行的原因主要是防止同步执行时阻塞浏览器渲染
 export function flushPassiveEffects(wasDelayedCommit?: boolean): boolean {
   // Returns whether passive effects were flushed.
   // TODO: Combine this check with the one in flushPassiveEFfectsImpl. We should
