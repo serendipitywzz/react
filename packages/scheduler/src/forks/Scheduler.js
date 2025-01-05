@@ -457,7 +457,7 @@ let taskTimeoutID: TimeoutID = (-1: any);
 // thread, like user events. By default, it yields multiple times per frame.
 // It does not attempt to align with frame boundaries, since most tasks don't
 // need to be frame aligned; for those that do, use requestAnimationFrame.
-let frameInterval = frameYieldMs;
+let frameInterval = frameYieldMs; // 预设时间分片大小
 let startTime = -1;
 
 // 是否让出主线程 =》 让浏览器能执行更高优先级的任务（eg：响应用户输入、UI绘制等

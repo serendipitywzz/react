@@ -331,8 +331,12 @@ if (__DEV__) {
 
 // Fiber对象的创建 🍾🥂🥃🍽️🧋🧉🍾🧅🥑🫑🫛🥜🌻🌼🌴🌳🍂🪹🌿🪴☘️🚗🚐🚔🚘🛹🦼🏍️🚞🚆🛞🏁
 /**
+ * @desc 根据新的虚拟DOM生成新的Fiber链表
  * 对于mount的组件，他会创建新的子Fiber节点
  * 对于update的组件，他会将当前组件与该组件在上次更新时对应的Fiber节点比较（也就是俗称的Diff算法），将比较的结果生成新Fiber节点
+ * @param current - 老的父Fiber节点
+ * @param workInProgress  - 新的Fiber节点
+ * @param nextChildren - 新的子VDOM
  * */
 export function reconcileChildren(
   current: Fiber | null,
@@ -352,7 +356,7 @@ export function reconcileChildren(
   /// commit阶段在执行DOM操作时每个节点都会执行一次插入操作，这样大量的DOM操作是极低效的。
   // 为了解决这个问题，在mount时只有rootFiber会赋值Placement effectTag，在commit阶段只会执行一次插入操作。
   if (current === null) {
-    // TODO 🚨 针对mount组件的逻辑
+    // @desc 🚨 针对mount组件的逻辑
     workInProgress.child = mountChildFibers(
       workInProgress,
       null,
@@ -360,7 +364,7 @@ export function reconcileChildren(
       renderLanes,
     );
   } else {
-    // TODO 🚨 针对update组件的逻辑
+    // @desc 🚨 针对update组件的逻辑
     workInProgress.child = reconcileChildFibers(
       workInProgress,
       current.child,
@@ -1463,6 +1467,12 @@ function pushHostRootContext(workInProgress: Fiber) {
   pushHostContainer(workInProgress, root.containerInfo);
 }
 
+/**
+ * @desc 更新HostRoot类型的Fiber节点
+ * @param current - 老的Fiber节点
+ * @param workInProgress - 新的Fiber节点
+ * @returns - 新的子Fiber节点
+ * */
 function updateHostRoot(
   current: null | Fiber,
   workInProgress: Fiber,
@@ -1597,7 +1607,12 @@ function mountHostRootWithoutHydrating(
   reconcileChildren(current, workInProgress, nextChildren, renderLanes);
   return workInProgress.child;
 }
-
+/**
+ *  @desc 更新原生组件的Fiber节点并构建子Fiber链表
+ *  @param {FiberNode} current - 老的Fiber节点
+ *  @param {FiberNode} workInProgress - 新的Fiber节点
+ *  @return {FiberNode} 新的子Fiber节点
+ * */
 function updateHostComponent(
   current: Fiber | null,
   workInProgress: Fiber,
@@ -1609,9 +1624,9 @@ function updateHostComponent(
 
   pushHostContext(workInProgress);
 
-  const type = workInProgress.type;
-  const nextProps = workInProgress.pendingProps;
-  const prevProps = current !== null ? current.memoizedProps : null;
+  const type = workInProgress.type; // Fiber节点类型
+  const nextProps = workInProgress.pendingProps; // 新的节点属性
+  const prevProps = current !== null ? current.memoizedProps : null; // 旧的节点属性
 
   let nextChildren = nextProps.children;
   const isDirectTextChild = shouldSetTextContent(type, nextProps);
@@ -3827,102 +3842,20 @@ function attemptEarlyBailoutIfNoScheduledUpdate(
   }
   return bailoutOnAlreadyFinishedWork(current, workInProgress, renderLanes);
 }
-
+/**
+ * 🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎
+ * create new Fiber NodeList from new VDOM
+ * @param current - 老的Fiber节点
+ * @param workInProgress - 新的Fiber节点
+ * @returns FiberNode 新的子Fiber节点或null
+ * TODO: beginWork的作用：根据虚拟DOM节点生成Fiber节点
+ * 🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎
+ * */
 function beginWork(
   current: Fiber | null,
   workInProgress: Fiber,
   renderLanes: Lanes,
 ): Fiber | null {
-  if (__DEV__) {
-    /**
-     * 第一次渲染即 mount时：  current是null
-     * 更新是即 update时：    current不是null
-     * update时：如果current存在，在满足一定条件时可以复用current节点，这样就能克隆current.child作为workInProgress.child，而不需要新建workInProgress.child。
-     *
-     * mount时：除fiberRootNode以外，current === null。会根据fiber.tag不同，创建不同类型的子Fiber节点
-     * */
-    if (workInProgress._debugNeedsRemount && current !== null) {
-      // This will restart the begin phase with a new fiber.
-      const copiedFiber = createFiberFromTypeAndProps(
-        workInProgress.type,
-        workInProgress.key,
-        workInProgress.pendingProps,
-        workInProgress._debugOwner || null,
-        workInProgress.mode,
-        workInProgress.lanes,
-      );
-      if (enableOwnerStacks) {
-        copiedFiber._debugStack = workInProgress._debugStack;
-        copiedFiber._debugTask = workInProgress._debugTask;
-      }
-      return remountFiber(current, workInProgress, copiedFiber);
-    }
-  }
-
-  if (current !== null) {
-    const oldProps = current.memoizedProps;
-    const newProps = workInProgress.pendingProps;
-
-    if (
-      oldProps !== newProps ||
-      hasLegacyContextChanged() ||
-      // Force a re-render if the implementation changed due to hot reload:
-      (__DEV__ ? workInProgress.type !== current.type : false)
-    ) {
-      // If props or context changed, mark the fiber as having performed work.
-      // This may be unset if the props are determined to be equal later (memo).
-      didReceiveUpdate = true;
-    } else {
-      // Neither props nor legacy context changes. Check if there's a pending
-      // update or context change.
-      const hasScheduledUpdateOrContext = checkScheduledUpdateOrContext(
-        current,
-        renderLanes,
-      );
-      if (
-        !hasScheduledUpdateOrContext &&
-        // If this is the second pass of an error or suspense boundary, there
-        // may not be work scheduled on `current`, so we check for this flag.
-        (workInProgress.flags & DidCapture) === NoFlags
-      ) {
-        // No pending updates or context. Bail out now.
-        didReceiveUpdate = false;
-        return attemptEarlyBailoutIfNoScheduledUpdate(
-          current,
-          workInProgress,
-          renderLanes,
-        );
-      }
-      if ((current.flags & ForceUpdateForLegacySuspense) !== NoFlags) {
-        // This is a special case that only exists for legacy mode.
-        // See https://github.com/facebook/react/pull/19216.
-        didReceiveUpdate = true;
-      } else {
-        // An update was scheduled on this fiber, but there are no new props
-        // nor legacy context. Set this to false. If an update queue or context
-        // consumer produces a changed value, it will set this to true. Otherwise,
-        // the component will assume the children have not changed and bail out.
-        didReceiveUpdate = false;
-      }
-    }
-  } else {
-    didReceiveUpdate = false;
-
-    if (getIsHydrating() && isForkedChild(workInProgress)) {
-      // Check if this child belongs to a list of muliple children in
-      // its parent.
-      //
-      // In a true multi-threaded implementation, we would render children on
-      // parallel threads. This would represent the beginning of a new render
-      // thread for this subtree.
-      //
-      // We only use this for id generation during hydration, which is why the
-      // logic is located in this special branch.
-      const slotIndex = workInProgress.index;
-      const numberOfForks = getForksAtLevel(workInProgress);
-      pushTreeId(workInProgress, numberOfForks, slotIndex);
-    }
-  }
 
   // Before entering the begin phase, clear pending update priority.
   // TODO: This assumes that we're about to evaluate the component and process
@@ -3930,7 +3863,7 @@ function beginWork(
   // sometimes bails out later in the begin phase. This indicates that we should
   // move this assignment out of the common path and into each branch.
   workInProgress.lanes = NoLanes;
-
+  // 根据Fiber节点的tag即对应的节点类型创建不同的Fiber
   switch (workInProgress.tag) {
     case LazyComponent: {
       const elementType = workInProgress.elementType;

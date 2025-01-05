@@ -193,7 +193,11 @@ export function commitShowHideHostTextInstance(node: Fiber, isHidden: boolean) {
     captureCommitPhaseError(node, node.return, error);
   }
 }
-
+/**
+ * 获取fiber节点的宿主父节点
+ * @param {Fiber} fiber - fiber节点
+ * @returns {Fiber} fiber节点的宿主父节点
+ */
 function getHostParentFiber(fiber: Fiber): Fiber {
   let parent = fiber.return;
   while (parent !== null) {
@@ -208,7 +212,11 @@ function getHostParentFiber(fiber: Fiber): Fiber {
       'in React. Please file an issue.',
   );
 }
-
+/**
+ * 判断是否为宿主父节点
+ * @param {Fiber} fiber - fiber节点
+ * @returns {Boolean} 是宿主父节点则返回true，否则返回false
+ */
 function isHostParent(fiber: Fiber): boolean {
   return (
     fiber.tag === HostComponent ||
@@ -218,7 +226,11 @@ function isHostParent(fiber: Fiber): boolean {
     fiber.tag === HostPortal
   );
 }
-
+/**
+ * 获取宿主兄弟节点
+ * @param {Fiber} fiber - fiber节点
+ * @returns {Node|null} 如果存在宿主兄弟节点则返回，否则返回null
+ */
 function getHostSibling(fiber: Fiber): ?Instance {
   // We're going to search forward into the tree until we find a sibling host
   // node. Unfortunately, if multiple insertions are done in a row we have to
@@ -301,7 +313,12 @@ function insertOrAppendPlacementNodeIntoContainer(
     }
   }
 }
-
+/**
+ * 将节点插入或附加到父节点
+ * @param {Fiber} node - fiber节点
+ * @param {Node} before - 参考节点
+ * @param {Node} parent - 父节点
+ */
 function insertOrAppendPlacementNode(
   node: Fiber,
   before: ?Instance,
@@ -336,7 +353,10 @@ function insertOrAppendPlacementNode(
     }
   }
 }
-
+/**
+ * 提交位置
+ * @param {Fiber} finishedWork - 已完成的工作单位，即fiber节点
+ */
 function commitPlacement(finishedWork: Fiber): void {
   if (!supportsMutation) {
     return;

@@ -371,6 +371,14 @@ type ChildReconciler = (
 // to be able to optimize each path individually by branching early. This needs
 // a compiler or we can do it manually. Helpers that don't need this branching
 // live outside of this function.
+/**
+ * @desc 创建Child Reconciler的函数
+ * @param shouldTrackSideEffects - 是否需要跟踪副作用
+ * @return reconcileChildFibers - 用于处理子Fiber的函数
+ *
+ * 会根据传入的shouldTrackSideEffects参数返回一个函数reconcileChildFibers
+ * reconcileChildFibers函数可根据新旧Fiber进行比较并返回处理结果。
+ * */
 function createChildReconciler(
   shouldTrackSideEffects: boolean,
 ): ChildReconciler {
@@ -436,6 +444,12 @@ function createChildReconciler(
     return clone;
   }
 
+  /**
+   * 为新创建的Fiber设置索引，并在必要时设置副作用
+   *
+   * @param {Fiber} newFiber - 新创建的Fiber
+   * @param {number} newIdx - 新的索引
+   */
   function placeChild(
     newFiber: Fiber,
     lastPlacedIndex: number,
@@ -465,7 +479,11 @@ function createChildReconciler(
       return lastPlacedIndex;
     }
   }
-
+  /**
+   * @desc 设置副作用
+   * @param newFiber - 新创建的Fiber
+   * @return newFiber - 返回新创建的Fiber
+   * */
   function placeSingleChild(newFiber: Fiber): Fiber {
     // This is simpler for the single child case. We only need to do a
     // placement for inserting new children.
@@ -625,7 +643,12 @@ function createChildReconciler(
       return existing;
     }
   }
-
+/**
+ * @desc 根据新的子节点创建Fiber
+ * @param returnFiber - 新的父Fiber
+ * @param newChild - 新的子节点
+ * @return created - 返回新创建的Fiber or null
+ * */
   function createChild(
     returnFiber: Fiber,
     newChild: any,
@@ -646,14 +669,6 @@ function createChildReconciler(
         lanes,
       );
       created.return = returnFiber;
-      if (__DEV__) {
-        // We treat the parent as the owner for stack purposes.
-        created._debugOwner = returnFiber;
-        if (enableOwnerStacks) {
-          created._debugTask = returnFiber._debugTask;
-        }
-        created._debugInfo = currentDebugInfo;
-      }
       return created;
     }
 
@@ -1100,7 +1115,14 @@ function createChildReconciler(
     }
     return knownKeys;
   }
-
+  /**
+   * 将新的子节点数组与旧的子Fiber进行比较，并返回新的子Fiber
+   *
+   * @param {Fiber} returnFiber - 新的父Fiber
+   * @param {Fiber} currentFirstFiber - 老fiber第一个子fiber
+   * @param {Array} newChildren - 新的子节点数组
+   * @return {Fiber} resultingFirstChild - 返回的新的子Fiber
+   */
   function reconcileChildrenArray(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
@@ -1612,7 +1634,13 @@ function createChildReconciler(
     }
     return created;
   }
-
+  /**
+   * @desc 将新创建的元素转换为Fiber
+   * @param returnFiber - 新的父Fiber
+   * @param currentFirstChild - 老Fiber的第一个子Fiber
+   * @param element - 新的子VOM元素
+   * @return created - 返回新创建的Fiber
+   * */
   function reconcileSingleElement(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
@@ -1675,6 +1703,7 @@ function createChildReconciler(
     }
 
     if (element.type === REACT_FRAGMENT_TYPE) {
+      // 🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎
       const created = createFiberFromFragment(
         element.props.children,
         returnFiber.mode,
@@ -1682,14 +1711,6 @@ function createChildReconciler(
         element.key,
       );
       created.return = returnFiber;
-      if (__DEV__) {
-        // We treat the parent as the owner for stack purposes.
-        created._debugOwner = returnFiber;
-        if (enableOwnerStacks) {
-          created._debugTask = returnFiber._debugTask;
-        }
-        created._debugInfo = currentDebugInfo;
-      }
       validateFragmentProps(element, created, returnFiber);
       return created;
     } else {
@@ -1916,7 +1937,14 @@ function createChildReconciler(
     // Remaining cases are all treated as empty.
     return deleteRemainingChildren(returnFiber, currentFirstChild);
   }
-
+  /**
+   * 比较子Fibers
+   *
+   * @param {Fiber} returnFiber - 新的父Fiber
+   * @param {Fiber} currentFirstFiber - 老fiber第一个子fiber
+   * @param {object} newChild - 新的子虚拟DOM
+   * @return {Fiber | null} result - 返回的新的子Fiber，或null
+   */
   function reconcileChildFibers(
     returnFiber: Fiber,
     currentFirstChild: Fiber | null,
@@ -1994,9 +2022,10 @@ function createChildReconciler(
 
   return reconcileChildFibers;
 }
-
+//有老父fiber更新的时候用这个
 export const reconcileChildFibers: ChildReconciler =
   createChildReconciler(true);
+//如果没有老父fiber,初次挂载的时候用这个
 export const mountChildFibers: ChildReconciler = createChildReconciler(false);
 
 export function resetChildReconcilerOnUnwind(): void {

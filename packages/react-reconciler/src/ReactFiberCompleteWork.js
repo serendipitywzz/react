@@ -738,6 +738,10 @@ function cutOffTailIfNeeded(
   }
 }
 
+/**
+ * 冒泡处理已完成Fiber节点的属性
+ * @param {Fiber} completedWork - 已完成的Fiber节点
+ * */
 function bubbleProperties(completedWork: Fiber) {
   const didBailout =
     completedWork.alternate !== null &&
@@ -939,7 +943,10 @@ function completeDehydratedSuspenseBoundary(
   }
 }
 /**
+ * @desc 完成一个Fiber节点
  * completeWork也是针对不同fiber.tag调用不同的处理逻辑。
+ * @param {Fiber} current - 当前旧的Fiber节点
+ * @param {Fiber} workInProgress - 新建的Fiber节点
  * */
 function completeWork(
   current: Fiber | null,

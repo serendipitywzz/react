@@ -772,23 +772,15 @@ export function peekDeferredLane(): Lane {
   return workInProgressDeferredLane;
 }
 
+/**
+ * @desc 在Fiber上计划更新根节点
+ * @params root 根节点
+ * */
 export function scheduleUpdateOnFiber(
   root: FiberRoot,
   fiber: Fiber,
   lane: Lane,
 ) {
-  if (__DEV__) {
-    if (isRunningInsertionEffect) {
-      console.error('useInsertionEffect must not schedule updates.');
-    }
-  }
-
-  if (__DEV__) {
-    if (isFlushingPassiveEffects) {
-      didScheduleUpdateDuringPassiveEffects = true;
-    }
-  }
-
   // Check if the work loop is currently suspended and waiting for data to
   // finish loading.
   if (
@@ -879,7 +871,10 @@ export function scheduleUpdateOnFiber(
         );
       }
     }
-
+    /**
+     * @desc 确保根节点被调度执行
+     * @param root - 根节点
+     * */
     ensureRootIsScheduled(root);
     if (
       lane === SyncLane &&
@@ -924,7 +919,10 @@ export function isUnsafeClassRenderPhaseUpdate(fiber: Fiber): boolean {
   // which special (deprecated) behavior for UNSAFE_componentWillReceive props.
   return (executionContext & RenderContext) !== NoContext;
 }
-
+/**
+ * @desc 执行根节点上的工作
+ * @param root - 跟节点
+ * */
 export function performWorkOnRoot(
   root: FiberRoot,
   lanes: Lanes,
@@ -933,7 +931,6 @@ export function performWorkOnRoot(
   if ((executionContext & (RenderContext | CommitContext)) !== NoContext) {
     throw new Error('Should not already be working.');
   }
-
   if (enableProfilerTimer && enableComponentPerformanceTrack) {
     if (workInProgressRootRenderLanes !== NoLanes && workInProgress !== null) {
       const yieldedFiber = workInProgress;
@@ -1101,7 +1098,7 @@ export function performWorkOnRoot(
     }
     break;
   } while (true);
-
+  // 确保根节点被调度执行
   ensureRootIsScheduled(root);
 }
 
@@ -1737,7 +1734,10 @@ function finalizeRender(lanes: Lanes, finalizationTime: number): void {
     }
   }
 }
-
+/**
+ * @desc 准备一个新的工作栈
+ * @param root - 根节点
+ * */
 function prepareFreshStack(root: FiberRoot, lanes: Lanes): Fiber {
   if (enableProfilerTimer && enableComponentPerformanceTrack) {
     // The order of tracks within a group are determined by the earliest start time.
@@ -2228,6 +2228,10 @@ export function renderHasNotSuspendedYet(): boolean {
 // TODO: Over time, this function and renderRootConcurrent have become more
 // and more similar. Not sure it makes sense to maintain forked paths. Consider
 // unifying them again.
+/**
+ * 同步渲染根节点
+ * @param root - 根节点
+ * */
 function renderRootSync(
   root: FiberRoot,
   lanes: Lanes,
@@ -2684,7 +2688,7 @@ function renderRootConcurrent(root: FiberRoot, lanes: Lanes) {
 }
 
 /** @noinline */
-// TODO 由performConcurrentWorkOnRoot 异步 调用该方法 ---> shouldYield() 时间片超时处理
+// @desc 由performConcurrentWorkOnRoot 异步 调用该方法 ---> shouldYield() 时间片超时处理
 function workLoopConcurrent() {
   // Perform work until Scheduler asks us to yield
   //
@@ -2693,42 +2697,21 @@ function workLoopConcurrent() {
     performUnitOfWork(workInProgress);
   }
 }
-
+// 构建链表结构
+// performUnitOfWork: 执行当前工作单元
 function performUnitOfWork(unitOfWork: Fiber): void {
   // The current, flushed, state of this fiber is the alternate. Ideally
   // nothing should rely on this, but relying on it here means that we don't
   // need an additional field on the work in progress.
   const current = unitOfWork.alternate;
-
   let next;
   if (enableProfilerTimer && (unitOfWork.mode & ProfileMode) !== NoMode) {
     startProfilerTimer(unitOfWork);
-    if (__DEV__) {
-      next = runWithFiberInDEV(
-        unitOfWork,
-        beginWork,
-        current,
-        unitOfWork,
-        entangledRenderLanes,
-      );
-    } else {
-      next = beginWork(current, unitOfWork, entangledRenderLanes);
-    }
+    next = beginWork(current, unitOfWork, entangledRenderLanes);
     stopProfilerTimerIfRunningAndRecordDuration(unitOfWork);
   } else {
-    if (__DEV__) {
-      next = runWithFiberInDEV(
-        unitOfWork,
-        beginWork,
-        current,
-        unitOfWork,
-        entangledRenderLanes,
-      );
-    } else {
       next = beginWork(current, unitOfWork, entangledRenderLanes);
-    }
   }
-
   unitOfWork.memoizedProps = unitOfWork.pendingProps;
   if (next === null) {
     // If this doesn't spawn new work, complete the current work.
@@ -2991,7 +2974,7 @@ function panicOnRootError(root: FiberRoot, error: mixed) {
   // TODO: Consider calling `unwindWork` to pop the contexts.
   workInProgress = null;
 }
-
+// 🍎 完成一个工作单元 🍎
 // 在completeWork的上层函数completeUnitOfWork中，
 // 每个执行完completeWork且存在effectTag的Fiber节点会被保存在一条被称为effectList的单向链表中。
 function completeUnitOfWork(unitOfWork: Fiber): void {
@@ -3019,17 +3002,7 @@ function completeUnitOfWork(unitOfWork: Fiber): void {
 
     let next;
     startProfilerTimer(completedWork);
-    if (__DEV__) {
-      next = runWithFiberInDEV(
-        completedWork,
-        completeWork,
-        current,
-        completedWork,
-        entangledRenderLanes,
-      );
-    } else {
-      next = completeWork(current, completedWork, entangledRenderLanes);
-    }
+    next = completeWork(current, completedWork, entangledRenderLanes);
     if (enableProfilerTimer && (completedWork.mode & ProfileMode) !== NoMode) {
       // Update render duration assuming we didn't error.
       stopProfilerTimerIfRunningAndRecordIncompleteDuration(completedWork);
@@ -3142,6 +3115,10 @@ const IMMEDIATE_COMMIT = 0;
 const SUSPENDED_COMMIT = 1;
 const THROTTLED_COMMIT = 2;
 
+/**
+ * @desc 提交根节点
+ * @param root - 根节点
+ * */
 function commitRoot(
   root: FiberRoot,
   recoverableErrors: null | Array<CapturedValue<mixed>>,

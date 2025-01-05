@@ -93,37 +93,27 @@ import {
 import {ConcurrentRoot} from 'react-reconciler/src/ReactRootTags';
 
 // $FlowFixMe[missing-this-annot]
+/**
+ * 创建ReactDOMRoot实例对象
+ * 引用了React Fiber树的根节点
+ * */
 function ReactDOMRoot(internalRoot: FiberRoot) {
   this._internalRoot = internalRoot;
 }
 
 // $FlowFixMe[prop-missing] found when upgrading Flow
+/**
+ * render方法负责渲染或更新React组件树
+ * */
 ReactDOMHydrationRoot.prototype.render = ReactDOMRoot.prototype.render =
   // $FlowFixMe[missing-this-annot]
+    /**
+     * children - 需要渲染的React元素或组件
+     * render方法内部调用updateContainer函数，将传入的React元素或组件
+     * */
   function (children: ReactNodeList): void {
     const root = this._internalRoot;
-    if (root === null) {
-      throw new Error('Cannot update an unmounted root.');
-    }
-
-    if (__DEV__) {
-      if (typeof arguments[1] === 'function') {
-        console.error(
-          'does not support the second callback argument. ' +
-            'To execute a side effect after rendering, declare it in a component body with useEffect().',
-        );
-      } else if (isValidContainer(arguments[1])) {
-        console.error(
-          'You passed a container to the second argument of root.render(...). ' +
-            "You don't need to pass it again since you already passed it to create the root.",
-        );
-      } else if (typeof arguments[1] !== 'undefined') {
-        console.error(
-          'You passed a second argument to root.render(...) but it only accepts ' +
-            'one argument.',
-        );
-      }
-    }
+    // 更新或渲染到当前的Fiber树(_internalRoot属性对应的Fiber树)中
     updateContainer(children, root, null, null);
   };
 
@@ -157,17 +147,18 @@ ReactDOMHydrationRoot.prototype.unmount = ReactDOMRoot.prototype.unmount =
       unmarkContainerAsRoot(container);
     }
   };
-
+/**
+ * @desc: 创建Fiber根节点并封装为ReactDOMRoot对象的工厂函数
+ * @param {HTMLElement} container - React组件需要渲染到的DOM元素
+ * @return {ReactDOMRoot} - 封装了Fiber根节点的ReactDOMRoot对象
+ * createRoot是一个工厂函数，接收一个DOM元素作为参数,这个DOM代表React应用的根节点
+ * 在函数内部首先通过调用createContainer函数，传入DOM元素参数,创建一个Fiber根节点
+ * 之后将这个Fiber根节点传入ReactDOMRoot构造函数，创建一个ReactDOMRoot实例对象并返回
+ * */
 export function createRoot(
   container: Element | Document | DocumentFragment,
   options?: CreateRootOptions,
 ): RootType {
-  if (!isValidContainer(container)) {
-    throw new Error('Target container is not a DOM element.');
-  }
-
-  warnIfReactDOMContainerInDEV(container);
-
   const concurrentUpdatesByDefaultOverride = false;
   let isStrictMode = false;
   let identifierPrefix = '';
@@ -175,49 +166,6 @@ export function createRoot(
   let onCaughtError = defaultOnCaughtError;
   let onRecoverableError = defaultOnRecoverableError;
   let transitionCallbacks = null;
-
-  if (options !== null && options !== undefined) {
-    if (__DEV__) {
-      if ((options: any).hydrate) {
-        console.warn(
-          'hydrate through createRoot is deprecated. Use ReactDOMClient.hydrateRoot(container, <App />) instead.',
-        );
-      } else {
-        if (
-          typeof options === 'object' &&
-          options !== null &&
-          (options: any).$$typeof === REACT_ELEMENT_TYPE
-        ) {
-          console.error(
-            'You passed a JSX element to createRoot. You probably meant to ' +
-              'call root.render instead. ' +
-              'Example usage:\n\n' +
-              '  let root = createRoot(domContainer);\n' +
-              '  root.render(<App />);',
-          );
-        }
-      }
-    }
-    if (options.unstable_strictMode === true) {
-      isStrictMode = true;
-    }
-    if (options.identifierPrefix !== undefined) {
-      identifierPrefix = options.identifierPrefix;
-    }
-    if (options.onUncaughtError !== undefined) {
-      onUncaughtError = options.onUncaughtError;
-    }
-    if (options.onCaughtError !== undefined) {
-      onCaughtError = options.onCaughtError;
-    }
-    if (options.onRecoverableError !== undefined) {
-      onRecoverableError = options.onRecoverableError;
-    }
-    if (options.unstable_transitionCallbacks !== undefined) {
-      transitionCallbacks = options.unstable_transitionCallbacks;
-    }
-  }
-
   const root = createContainer(
     container,
     ConcurrentRoot,

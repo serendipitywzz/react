@@ -44,7 +44,10 @@ export type RootState = {
   isDehydrated: boolean,
   cache: Cache,
 };
-
+/**
+ * @desc Fiber根节点对象构造树
+ * @param {any} containerInfo - 容器信息
+ * */
 function FiberRootNode(
   this: $FlowFixMe,
   containerInfo: any,
@@ -58,7 +61,7 @@ function FiberRootNode(
   formState: ReactFormState<any, any> | null,
 ) {
   this.tag = disableLegacyMode ? ConcurrentRoot : tag;
-  this.containerInfo = containerInfo;
+  this.containerInfo = containerInfo; // 容器信息 eg: div#root
   this.pendingChildren = null;
   this.current = null;
   this.pingCache = null;
@@ -140,7 +143,11 @@ function FiberRootNode(
     }
   }
 }
-
+/**
+ * @desc 创建Fiber根节点
+ * @param {any} containerInfo - 容器信息
+ * @return {FiberRootNode} - 创建的Fiber根节点
+ * */
 export function createFiberRoot(
   containerInfo: Container,
   tag: RootTag,
@@ -171,7 +178,6 @@ export function createFiberRoot(
   transitionCallbacks: null | TransitionTracingCallbacks,
   formState: ReactFormState<any, any> | null,
 ): FiberRoot {
-  // $FlowFixMe[invalid-constructor] Flow no longer supports calling new on functions
   const root: FiberRoot = (new FiberRootNode(
     containerInfo,
     tag,
@@ -182,18 +188,13 @@ export function createFiberRoot(
     onRecoverableError,
     formState,
   ): any);
-  if (enableSuspenseCallback) {
-    root.hydrationCallbacks = hydrationCallbacks;
-  }
-
-  if (enableTransitionTracing) {
-    root.transitionCallbacks = transitionCallbacks;
-  }
 
   // Cyclic construction. This cheats the type system right now because
   // stateNode is any.
+  // 创建未初始化的根Fiber
   const uninitializedFiber = createHostRootFiber(tag, isStrictMode);
   root.current = uninitializedFiber;
+  // 根Fiber的stateNode，即真实DOM节点，指向FiberRootNode
   uninitializedFiber.stateNode = root;
 
   if (enableCache) {
@@ -223,7 +224,7 @@ export function createFiberRoot(
     };
     uninitializedFiber.memoizedState = initialState;
   }
-
+  // 初始化根Fiber的更新队列
   initializeUpdateQueue(uninitializedFiber);
 
   return root;

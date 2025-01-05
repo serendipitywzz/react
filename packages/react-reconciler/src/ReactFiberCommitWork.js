@@ -1591,6 +1591,11 @@ export function commitMutationEffects(
   inProgressRoot = null;
 }
 
+/**
+ * 递归遍历所有子节点并在每个fiber上应用mutation副作用
+ * @param {Fiber} root - Fiber树的根节点
+ * @param {Fiber} parentFiber - 当前fiber节点的父节点
+ */
 function recursivelyTraverseMutationEffects(
   root: FiberRoot,
   parentFiber: Fiber,
@@ -2140,7 +2145,10 @@ function commitMutationEffectsOnFiber(
 
   popComponentEffectStart(prevEffectStart);
 }
-
+/**
+ * 应用fiber节点上的调和副作用
+ * @param {Fiber} finishedWork - 已完成的工作单位，即fiber节点
+ */
 function commitReconciliationEffects(finishedWork: Fiber) {
   // Placement effects (insertions, reorders) can be scheduled on any fiber
   // type. They needs to happen after the children effects have fired, but

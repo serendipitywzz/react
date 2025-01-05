@@ -224,7 +224,11 @@ function findHostInstanceWithWarning(
   }
   return findHostInstance(component);
 }
-
+/**
+ * 创建容器，用于将虚拟DOM转为真实DOM并插入到容器中
+ * @param {*} containerInfo - DOM容器信息
+ * @returns {FiberRoot} - 创建的Fiber根节点
+ * */
 export function createContainer(
   containerInfo: Container,
   tag: RootTag,
@@ -332,7 +336,11 @@ export function createHydrationContainer(
 
   return root;
 }
-
+/**
+ * @desc 更新容器，将虚拟DOM转换为真实DOM并插入到容器中
+ * @param {*} element - 虚拟DOM元素
+ * @param {*} container - DOM容器，FiberRootNode
+ * */
 export function updateContainer(
   element: ReactNodeList,
   container: OpaqueRoot,

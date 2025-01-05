@@ -12,13 +12,16 @@ import {enableCreateEventHandleAPI} from 'shared/ReactFeatureFlags';
 export type Flags = number;
 
 // Don't change these values. They're used by React Dev Tools.
+// 标识位：无
 export const NoFlags = /*                      */ 0b0000000000000000000000000000;
 export const PerformedWork = /*                */ 0b0000000000000000000000000001;
+// 标识位：插入
 export const Placement = /*                    */ 0b0000000000000000000000000010;
 export const DidCapture = /*                   */ 0b0000000000000000000010000000;
 export const Hydrating = /*                    */ 0b0000000000000001000000000000;
 
 // You can change the rest (and add more).
+// 标识位：更新
 export const Update = /*                       */ 0b0000000000000000000000000100;
 export const Cloned = /*                       */ 0b0000000000000000000000001000;
 
@@ -88,7 +91,7 @@ export const BeforeMutationMask: number =
       // element is focused.
       ChildDeletion | Visibility
     : 0);
-
+// 🍊🍊🍊变更标识位掩码
 export const MutationMask =
   Placement |
   Update |

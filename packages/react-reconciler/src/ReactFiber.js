@@ -41,6 +41,7 @@ import {
 } from 'shared/ReactFeatureFlags';
 import {NoFlags, Placement, StaticMask} from './ReactFiberFlags';
 import {ConcurrentRoot} from './ReactRootTags';
+// 导入React中的一些工作标签和标记
 import {
   ClassComponent,
   HostRoot,
@@ -132,7 +133,13 @@ if (__DEV__) {
     hasBadMapPolyfill = true;
   }
 }
-
+/**
+ * 🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎
+ *  @desc 构造函数，用于创建一个新的Fiber节点
+ *  @param {number} tag - fiber的类型，eg: 函数组件、类组件、原生组件、根元素等
+ *  @param {*} pendingProps - 新属性，等待处理或生效的属性
+ *  🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎🍎
+ * */
 function FiberNode(
   this: $FlowFixMe,
   tag: WorkTag,
@@ -141,37 +148,84 @@ function FiberNode(
   mode: TypeOfMode,
 ) {
   // Instance
-  this.tag = tag;
-  this.key = key;
-  this.elementType = null;
-  this.type = null;
-  this.stateNode = null;
+  this.tag = tag; // Fiber节点类型 eg: FunctionComponent、ClassComponent、HostComponent(DOM节点
+  this.key = key; // Fiber节点唯一标识，协助React识别
+  this.elementType = null; // Fiber节点对应的React元素类型 eg: 组件类型(MyComponent) or 元素类型(div)
+  this.type = null; // Fiber节点的具体组件类型 类组件，type就是类的构造函数。函数组件，type就是函数本身。DOM节点，type是HTML元素的标签名（例如 'div'）。
+  this.stateNode = null; /// 与该Fiber节点关联的实例或DOM节点 在类组件中，它是类的实例；在函数组件中，它通常为null；在DOM节点中，它是实际的DOM元素（例如<div />对应的DOM节点）
 
   // Fiber
-  this.return = null;
-  this.child = null;
-  this.sibling = null;
-  this.index = 0;
+  this.return = null; // 指向当前Fiber节点的父Fiber节点
+  this.child = null; // 指向当前Fiber节点的第一个子节点
+  this.sibling = null; // 指向当前Fiber节点的下一个兄弟节点
+  this.index = 0; // 当前Fiber节点在其兄弟节点中的索引位置 通常在渲染列表时有用，帮助React确定每个元素的位置和更新。
 
-  this.ref = null;
-  this.refCleanup = null;
+  this.ref = null; // 保存当前Fiber节点的ref， 用于在更新过程中对组件实例的引用。
+  this.refCleanup = null; // 用于存储清理ref时的副作用逻辑 React会确保在更新前后清理之前的ref
 
-  this.pendingProps = pendingProps;
-  this.memoizedProps = null;
+  this.pendingProps = pendingProps; //  当前Fiber节点的待处理的props
+  /**
+   * memoizedProps:
+   * 1. React在渲染过程中使用的props，它可能是上一次更新时的props，也可能是最新的props
+   * 2. 在更新后，memoizedProps会用来比较新旧props，以决定是否重新渲染组件。
+   * */
+  this.memoizedProps = null; // 当前Fiber节点的已处理的props
+  /**
+   * @desc updateQueue 存储当前Fiber节点的更新队列, 通过队列管理所有待执行的更新
+   * eg: 函数组件中更新队列主要包含：setState、dispatch的操作
+   * 每当组件的状态发生变化，React会将更新添加到这个队列中
+   * */
   this.updateQueue = null;
+  /**
+   * @desc 当前Fiber节点的已处理的state
+   * 在更新过程中，React会通过memoizedState来决定是否需要重新渲染。
+   * */
   this.memoizedState = null;
+  /**
+   * @desc 用于存储与当前Fiber节点相关的依赖项
+   * 它通常与useEffect和useLayoutEffect相关，表示这些副作用函数依赖的值。
+   * 这有助于React确定哪些副作用需要在渲染后执行。
+   * */
   this.dependencies = null;
 
+  /**
+   * @desc 当前Fiber节点的渲染模式
+   * NoEffect：没有特别的渲染模式
+   * StrictMode：表示该节点处于React的严格模式下，React会执行额外的检查来确保代码符合最佳实践。
+   * ConcurrentMode：表示该节点正在使用并发模式，它会根据任务的优先级进行处理，允许React在后台渲染更新。
+   * */
   this.mode = mode;
 
   // Effects
+  /**
+   * 🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌
+   * @desc 标记当前Fiber节点的各种状态或变更类型，是一个位标志
+   * （eg: Placement新插入节点、Update需要更新的节点、Deletion需要删除的节点
+   * React通过这些标志来确定在提交阶段应该执行哪些操作
+   * 🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌🍌
+   * */
   this.flags = NoFlags;
+  // 类似于flags，标记子树的状态，保存当前节点所有子节点的变更标志
+  // React根据这些信息判断是否需要对子树进行更新
   this.subtreeFlags = NoFlags;
+  // 存储需要删除的Fiber节点
+  // 协调阶段，若React检测到某些节点需要删除（eg：组件卸载）
+  // 这些节点将被添加到deletions中，并在提交阶段被移除
   this.deletions = null;
 
+  /**
+   * 当前Fiber节点的优先级别
+   * React的调度信息通过lanes来决定任务的执行顺序
+   * 例如，高优先级的更新会分配较高的lane，而低优先级的更新会分配较低的lane。lanes帮助React优化任务的执行顺序。
+   * */
   this.lanes = NoLanes;
+  // 示当前Fiber节点所有子节点的优先级。React会根据这些lanes来决定什么时候执行子组件的更新
   this.childLanes = NoLanes;
 
+  // 🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉🍉
+  // 用于存储当前Fiber节点的替代节点
+  // 当一个更新发生时，React会保留一个旧的Fiber节点（替代节点）作为参考
+  // 用于比较新旧状态。alternate属性帮助React进行高效的虚拟DOM比较（diffing）和回溯更新
   this.alternate = null;
 
   if (enableProfilerTimer) {
@@ -302,6 +356,9 @@ function createFiberImplObject(
   return fiber;
 }
 
+/**
+ * createFiber(tag, pendingProps, key)
+ * */
 const createFiber = enableObjectFiber
   ? createFiberImplObject
   : createFiberImplClass;
@@ -326,6 +383,12 @@ export function isFunctionClassComponent(
 }
 
 // This is used to create an alternate fiber to do work on.
+/**
+ * @desc 基于旧的Fiber节点和新的属性创建一个新的Fiber节点
+ * @param current - 旧的Fiber节点
+ * @param pendingProps - 新的属性
+ * @returns FiberNode - 新的Fiber节点
+ * */
 export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
   let workInProgress = current.alternate;
   if (workInProgress === null) {
@@ -343,18 +406,6 @@ export function createWorkInProgress(current: Fiber, pendingProps: any): Fiber {
     workInProgress.elementType = current.elementType;
     workInProgress.type = current.type;
     workInProgress.stateNode = current.stateNode;
-
-    if (__DEV__) {
-      // DEV-only fields
-
-      workInProgress._debugOwner = current._debugOwner;
-      if (enableOwnerStacks) {
-        workInProgress._debugStack = current._debugStack;
-        workInProgress._debugTask = current._debugTask;
-      }
-      workInProgress._debugHookTypes = current._debugHookTypes;
-    }
-
     workInProgress.alternate = current;
     current.alternate = workInProgress;
   } else {
@@ -524,6 +575,9 @@ export function resetWorkInProgress(
   return workInProgress;
 }
 
+/**
+ * @desc 创建新的HostRoot类型的Fiber节点
+ * */
 export function createHostRootFiber(
   tag: RootTag,
   isStrictMode: boolean,
@@ -742,6 +796,11 @@ export function createFiberFromTypeAndProps(
   return fiber;
 }
 
+/**
+ * 从虚拟DOM创建新的Fiber节点
+ *  @param {*} element - 虚拟DOM元素
+ *  @returns {FiberNode} 新的Fiber节点
+ * */
 export function createFiberFromElement(
   element: ReactElement,
   mode: TypeOfMode,
@@ -762,16 +821,15 @@ export function createFiberFromElement(
     mode,
     lanes,
   );
-  if (__DEV__) {
-    fiber._debugOwner = element._owner;
-    if (enableOwnerStacks) {
-      fiber._debugStack = element._debugStack;
-      fiber._debugTask = element._debugTask;
-    }
-  }
   return fiber;
 }
-
+/**
+ *从类型和属性创建新的Fiber节点
+ * @param {*} type - Fiber节点的类型
+ * @param {*} key - 唯一标识
+ * @param {*} pendingProps - 新的属性
+ * @returns {FiberNode} 新的Fiber节点
+ * */
 export function createFiberFromFragment(
   elements: ReactFragment,
   mode: TypeOfMode,
@@ -917,7 +975,11 @@ export function createFiberFromTracingMarker(
   fiber.stateNode = tracingMarkerInstance;
   return fiber;
 }
-
+/**
+ * 创建一个新的文本类型的Fiber节点
+ * @param {*} content - 文本内容
+ * @returns {FiberNode} 新的文本类型的Fiber节点
+ */
 export function createFiberFromText(
   content: string,
   mode: TypeOfMode,

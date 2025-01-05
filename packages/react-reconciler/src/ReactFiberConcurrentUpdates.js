@@ -184,7 +184,11 @@ export function unsafe_markUpdateLaneFromFiberToRoot(
   markUpdateLaneFromFiberToRoot(sourceFiber, null, lane);
   return root;
 }
-
+/**
+ * 从源 Fiber 向上遍历树，找到根节点。
+ * @param {Fiber} sourceFiber - 源 Fiber。
+ * @returns {Node|null} - 如果找到根节点，则返回根节点；否则返回 null。
+ */
 function markUpdateLaneFromFiberToRoot(
   sourceFiber: Fiber,
   update: ConcurrentUpdate | null,
@@ -237,7 +241,7 @@ function markUpdateLaneFromFiberToRoot(
     node = parent;
     parent = parent.return;
   }
-
+// 持续向上遍历树，直到找到根节点
   if (isHidden && update !== null && node.tag === HostRoot) {
     const root: FiberRoot = node.stateNode;
     markHiddenUpdate(root, update, lane);
